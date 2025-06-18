@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
+import { useAuth } from '../services/auth'
 
 defineProps<{
   collapsed?: boolean
@@ -7,6 +8,7 @@ defineProps<{
 
 const colorMode = useColorMode()
 const appConfig = useAppConfig()
+const auth = useAuth()
 
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose']
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone']
@@ -145,7 +147,15 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
   target: '_blank'
 }], [{
   label: 'Log out',
-  icon: 'i-lucide-log-out'
+  icon: 'i-lucide-log-out',
+  onClick: async () => {
+    try {
+      await auth.logout()
+      // La redirection vers la page de login est gérée dans la méthode logout()
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error)
+    }
+  }
 }]]))
 </script>
 

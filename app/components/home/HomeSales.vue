@@ -1,112 +1,103 @@
 <script setup lang="ts">
 import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
-import type { Period, Range, Sale } from '~/types'
 
-const props = defineProps<{
-  period: Period
-  range: Range
-}>()
+interface Patient {
+  id: number
+  lastName: string
+  firstName: string
+  username: string
+  email: string
+  tel: string
+  numeroSecu: string
+  adresse: string
+  contactUrgence: string
+  dateCreation: string
+  actif: boolean
+  dossierMedicalId: number
+  nombreConsultations: number
+}
 
 const UBadge = resolveComponent('UBadge')
 
-const sampleEmails = [
-  'james.anderson@example.com',
-  'mia.white@example.com',
-  'william.brown@example.com',
-  'emma.davis@example.com',
-  'ethan.harris@example.com'
-]
-
-const { data } = await useAsyncData('sales', async () => {
-  const sales: Sale[] = []
-  const currentDate = new Date()
-
-  for (let i = 0; i < 5; i++) {
-    const hoursAgo = randomInt(0, 48)
-    const date = new Date(currentDate.getTime() - hoursAgo * 3600000)
-
-    sales.push({
-      id: (4600 - i).toString(),
-      date: date.toISOString(),
-      status: randomFrom(['paid', 'failed', 'refunded']),
-      email: randomFrom(sampleEmails),
-      amount: randomInt(100, 1000)
-    })
-  }
-
-  return sales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-}, {
-  watch: [() => props.period, () => props.range],
-  default: () => []
+const { data: patients, pending, error } = useFetch<Patient[]>(`http://localhost:9000/api/medical/professionnels/3/patients`, {
+  method: 'GET',
+  server: false // Force client-side only to avoid hydration mismatch
 })
-
-const columns: TableColumn<Sale>[] = [
+const columns: TableColumn<Patient>[] = [
   {
     accessorKey: 'id',
     header: 'ID',
     cell: ({ row }) => `#${row.getValue('id')}`
   },
   {
-    accessorKey: 'date',
-    header: 'Date',
+    accessorKey: 'dateCreation',
+    header: 'Date création',
     cell: ({ row }) => {
-      return new Date(row.getValue('date')).toLocaleString('en-US', {
+      return new Date(row.getValue('dateCreation')).toLocaleString('fr-FR', {
         day: 'numeric',
         month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
+        year: 'numeric'
       })
     }
   },
   {
-    accessorKey: 'status',
-    header: 'Status',
+    accessorKey: 'actif',
+    header: 'Statut',
     cell: ({ row }) => {
-      const color = {
-        paid: 'success' as const,
-        failed: 'error' as const,
-        refunded: 'neutral' as const
-      }[row.getValue('status') as string]
+      const isActive = row.getValue('actif')
+      const color = isActive ? 'success' : 'error'
+      const label = isActive ? 'Actif' : 'Inactif'
 
-      return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () =>
-        row.getValue('status')
-      )
+      return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () => label)
     }
   },
   {
-    accessorKey: 'email',
-    header: 'Email'
+    accessorKey: 'firstName',
+    header: 'Patient',
+    cell: ({ row }) => {
+      return `${row.getValue('firstName')} ${row.original.lastName}`
+    }
   },
   {
-    accessorKey: 'amount',
-    header: () => h('div', { class: 'text-right' }, 'Amount'),
+    accessorKey: 'nombreConsultations',
+    header: () => h('div', { class: 'text-right' }, 'Consultations'),
     cell: ({ row }) => {
-      const amount = Number.parseFloat(row.getValue('amount'))
-
-      const formatted = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'EUR'
-      }).format(amount)
-
-      return h('div', { class: 'text-right font-medium' }, formatted)
+      const consultations = Number.parseInt(row.getValue('nombreConsultations'))
+      return h('div', { class: 'text-right font-medium' }, `${consultations}`)
     }
   }
 ]
 </script>
 
 <template>
-  <UTable
-    :data="data"
-    :columns="columns"
-    class="shrink-0"
-    :ui="{
-      base: 'table-fixed border-separate border-spacing-0',
-      thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
-      tbody: '[&>tr]:last:[&>td]:border-b-0',
-      th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
-      td: 'border-b border-default'
-    }"
-  />
+  <ClientOnly>
+    <div v-if="pending" class="flex items-center justify-center h-32">
+      <UIcon name="i-heroicons-arrow-path" class="animate-spin" />
+    </div>
+    
+    <div v-else-if="error" class="flex items-center justify-center h-32">
+      <p class="text-red-500">Erreur lors du chargement des patients</p>
+    </div>
+    
+    <UTable
+      v-else
+      :data="patients || []"
+      :columns="columns"
+      class="shrink-0"
+      :ui="{
+        base: 'table-fixed border-separate border-spacing-0',
+        thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
+        tbody: '[&>tr]:last:[&>td]:border-b-0',
+        th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
+        td: 'border-b border-default'
+      }"
+    />
+    
+    <template #fallback>
+      <div class="flex items-center justify-center h-32">
+        <UIcon name="i-heroicons-arrow-path" class="animate-spin" />
+      </div>
+    </template>
+  </ClientOnly>
 </template>

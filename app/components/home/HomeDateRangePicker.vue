@@ -17,12 +17,22 @@ const ranges = [
   { label: 'Last year', years: 1 }
 ]
 
-const toCalendarDate = (date: Date) => {
+const toCalendarDate = (dateString: string) => {
+  // Ensure we have a valid date string
+  if (!dateString || typeof dateString !== 'string') {
+    dateString = new Date().toISOString().split('T')[0]!
+  }
+  const date = new Date(dateString)
   return new CalendarDate(
     date.getFullYear(),
     date.getMonth() + 1,
     date.getDate()
   )
+}
+
+const formatDateToString = (calendarDate: CalendarDate): string => {
+  const date = calendarDate.toDate(getLocalTimeZone())
+  return date.toISOString().split('T')[0]!
 }
 
 const calendarRange = computed({
@@ -31,9 +41,10 @@ const calendarRange = computed({
     end: selected.value.end ? toCalendarDate(selected.value.end) : undefined
   }),
   set: (newValue: { start: CalendarDate | null, end: CalendarDate | null }) => {
+    const todayString = new Date().toISOString().split('T')[0]!
     selected.value = {
-      start: newValue.start ? newValue.start.toDate(getLocalTimeZone()) : new Date(),
-      end: newValue.end ? newValue.end.toDate(getLocalTimeZone()) : new Date()
+      start: newValue.start ? formatDateToString(newValue.start) : todayString,
+      end: newValue.end ? formatDateToString(newValue.end) : todayString
     }
   }
 })
@@ -71,8 +82,8 @@ const selectRange = (range: { days?: number, months?: number, years?: number }) 
   }
 
   selected.value = {
-    start: startDate.toDate(getLocalTimeZone()),
-    end: endDate.toDate(getLocalTimeZone())
+    start: formatDateToString(startDate),
+    end: formatDateToString(endDate)
   }
 }
 </script>
@@ -88,10 +99,10 @@ const selectRange = (range: { days?: number, months?: number, years?: number }) 
       <span class="truncate">
         <template v-if="selected.start">
           <template v-if="selected.end">
-            {{ df.format(selected.start) }} - {{ df.format(selected.end) }}
+            {{ df.format(new Date(selected.start)) }} - {{ df.format(new Date(selected.end)) }}
           </template>
           <template v-else>
-            {{ df.format(selected.start) }}
+            {{ df.format(new Date(selected.start)) }}
           </template>
         </template>
         <template v-else>

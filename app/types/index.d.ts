@@ -58,3 +58,6 @@ export interface Range {
   start: Date
   end: Date
 }
+
+// Export des types patients
+export * from './patients'

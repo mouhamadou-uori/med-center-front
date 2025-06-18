@@ -1,4 +1,7 @@
 <script setup lang="ts">
+definePageMeta({
+  requiresAuth: true
+})
 const links = [[{
   label: 'General',
   icon: 'i-lucide-user',

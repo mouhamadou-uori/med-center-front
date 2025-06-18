@@ -1,4 +1,7 @@
 <script setup lang="ts">
+definePageMeta({
+  requiresAuth: true
+})
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 

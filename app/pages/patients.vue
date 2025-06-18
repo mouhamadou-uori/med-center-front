@@ -1,10 +1,30 @@
 <script setup lang="ts">
+import { useAuth } from '~/services/auth'
+import { ref, onMounted } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import { upperFirst } from 'scule'
 import { getPaginationRowModel, type Row } from '@tanstack/table-core'
-import type { User } from '~/types'
 
-const UAvatar = resolveComponent('UAvatar')
+definePageMeta({
+  requiresAuth: true
+})
+
+interface Patient {
+  id: number
+  lastName: string
+  firstName: string
+  patientname: string
+  email: string
+  tel: string
+  numeroSecu: string
+  adresse: string
+  contactUrgence: string
+  dateCreation: string
+  actif: boolean
+  dossierMedicalId: number | null
+  nombreConsultations: number
+}
+
 const UButton = resolveComponent('UButton')
 const UBadge = resolveComponent('UBadge')
 const UDropdownMenu = resolveComponent('UDropdownMenu')
@@ -20,24 +40,41 @@ const columnFilters = ref([{
 const columnVisibility = ref()
 const rowSelection = ref({ 1: true })
 
-const { data, status } = await useFetch<User[]>('/api/customers', {
+const { data, status } = await useFetch<Patient[]>('http://localhost:9000/api/medical/patients', {
   lazy: true
 })
 
-function getRowItems(row: Row<User>) {
+const nombrePatientsDistincts = ref<number | null>(null)
+const nombreConsultations = ref<number | null>(null)
+
+const { getCurrentUser } = useAuth()
+const currentUser = getCurrentUser()
+
+onMounted(async () => {
+  if (currentUser && currentUser.id) {
+    // Nombre de patients distincts
+    const { data: patientsDistincts } = await useFetch<number>(`http://localhost:9000/api/medical/consultations/professionnel/${currentUser.id}/patients-distincts`)
+    nombrePatientsDistincts.value = patientsDistincts.value ?? null
+    // Nombre total de consultations
+    const { data: totalConsults } = await useFetch<number>(`http://localhost:9000/api/medical/consultations/professionnel/${currentUser.id}/total`)
+    nombreConsultations.value = totalConsults.value ?? null
+  }
+})
+
+function getRowItems(row: Row<Patient>) {
   return [
     {
       type: 'label',
       label: 'Actions'
     },
     {
-      label: 'Copy customer ID',
+      label: 'Copier ID patient',
       icon: 'i-lucide-copy',
       onSelect() {
         navigator.clipboard.writeText(row.original.id.toString())
         toast.add({
-          title: 'Copied to clipboard',
-          description: 'Customer ID copied to clipboard'
+          title: 'Copié',
+          description: 'ID patient copié dans le presse-papier'
         })
       }
     },
@@ -45,31 +82,31 @@ function getRowItems(row: Row<User>) {
       type: 'separator'
     },
     {
-      label: 'View customer details',
-      icon: 'i-lucide-list'
+      label: 'Voir dossier médical',
+      icon: 'i-lucide-file-text'
     },
     {
-      label: 'View customer payments',
-      icon: 'i-lucide-wallet'
+      label: 'Voir examens',
+      icon: 'i-lucide-stethoscope'
     },
     {
       type: 'separator'
     },
     {
-      label: 'Delete customer',
+      label: 'Supprimer patient',
       icon: 'i-lucide-trash',
       color: 'error',
       onSelect() {
         toast.add({
-          title: 'Customer deleted',
-          description: 'The customer has been deleted.'
+          title: 'Patient supprimé',
+          description: 'Le patient a été supprimé.'
         })
       }
     }
   ]
 }
 
-const columns: TableColumn<User>[] = [
+const columns: TableColumn<Patient>[] = [
   {
     id: 'select',
     header: ({ table }) =>
@@ -93,17 +130,13 @@ const columns: TableColumn<User>[] = [
     header: 'ID'
   },
   {
-    accessorKey: 'name',
-    header: 'Name',
+    accessorKey: 'lastName',
+    header: 'Nom',
     cell: ({ row }) => {
       return h('div', { class: 'flex items-center gap-3' }, [
-        h(UAvatar, {
-          ...row.original.avatar,
-          size: 'lg'
-        }),
         h('div', undefined, [
-          h('p', { class: 'font-medium text-highlighted' }, row.original.name),
-          h('p', { class: '' }, `@${row.original.name}`)
+          h('p', { class: 'font-medium text-highlighted' }, `${row.original.lastName} ${row.original.firstName}`),
+          h('p', { class: '' }, row.original.patientname)
         ])
       ])
     }
@@ -128,23 +161,23 @@ const columns: TableColumn<User>[] = [
     }
   },
   {
-    accessorKey: 'location',
-    header: 'Location',
-    cell: ({ row }) => row.original.location
+    accessorKey: 'tel',
+    header: 'Téléphone',
+    cell: ({ row }) => row.original.tel
   },
   {
-    accessorKey: 'status',
-    header: 'Status',
+    accessorKey: 'actif',
+    header: 'Statut',
     filterFn: 'equals',
     cell: ({ row }) => {
+      const status = row.original.actif ? 'actif' : 'inactif'
       const color = {
-        subscribed: 'success' as const,
-        unsubscribed: 'error' as const,
-        bounced: 'warning' as const
-      }[row.original.status]
+        actif: 'success' as const,
+        inactif: 'error' as const
+      }[status]
 
       return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () =>
-        row.original.status
+        status
       )
     }
   },
@@ -197,15 +230,21 @@ const pagination = ref({
 </script>
 
 <template>
-  <UDashboardPanel id="customers">
+  <UDashboardPanel id="patients">
     <template #header>
-      <UDashboardNavbar title="Customers">
+      <UDashboardNavbar title="Patients">
+  <template #subtitle>
+    <div class="flex gap-4">
+      <span v-if="nombrePatientsDistincts !== null">Nombre de patients : <b>{{ nombrePatientsDistincts }}</b></span>
+      <span v-if="nombreConsultations !== null">Nombre de consultations : <b>{{ nombreConsultations }}</b></span>
+    </div>
+  </template>
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
 
         <template #right>
-          <CustomersAddModal />
+          <PatientsAddModal />
         </template>
       </UDashboardNavbar>
     </template>
@@ -216,15 +255,15 @@ const pagination = ref({
           :model-value="(table?.tableApi?.getColumn('email')?.getFilterValue() as string)"
           class="max-w-sm"
           icon="i-lucide-search"
-          placeholder="Filter emails..."
+          placeholder="Rechercher un patient..."
           @update:model-value="table?.tableApi?.getColumn('email')?.setFilterValue($event)"
         />
 
         <div class="flex flex-wrap items-center gap-1.5">
-          <CustomersDeleteModal :count="table?.tableApi?.getFilteredSelectedRowModel().rows.length">
+          <PatientsDeleteModal :count="table?.tableApi?.getFilteredSelectedRowModel().rows.length">
             <UButton
               v-if="table?.tableApi?.getFilteredSelectedRowModel().rows.length"
-              label="Delete"
+              label="Supprimer"
               color="error"
               variant="subtle"
               icon="i-lucide-trash"
@@ -235,18 +274,19 @@ const pagination = ref({
                 </UKbd>
               </template>
             </UButton>
-          </CustomersDeleteModal>
+          </PatientsDeleteModal>
 
           <USelect
             v-model="statusFilter"
             :items="[
-              { label: 'All', value: 'all' },
-              { label: 'Subscribed', value: 'subscribed' },
-              { label: 'Unsubscribed', value: 'unsubscribed' },
-              { label: 'Bounced', value: 'bounced' }
+              { label: 'Tous', value: 'all' },
+              { label: 'Actif', value: 'actif' },
+              { label: 'Inactif', value: 'inactif' },
+              { label: 'Actif', value: true },
+              { label: 'Inactif', value: false }
             ]"
             :ui="{ trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200' }"
-            placeholder="Filter status"
+            placeholder="Statut"
             class="min-w-28"
           />
           <UDropdownMenu
@@ -269,7 +309,7 @@ const pagination = ref({
             :content="{ align: 'end' }"
           >
             <UButton
-              label="Display"
+              label="Affichage"
               color="neutral"
               variant="outline"
               trailing-icon="i-lucide-settings-2"

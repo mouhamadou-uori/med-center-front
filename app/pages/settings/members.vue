@@ -1,4 +1,7 @@
 <script setup lang="ts">
+definePageMeta({
+  requiresAuth: true
+})
 import type { Member } from '~/types'
 
 const { data: members } = await useFetch<Member[]>('/api/members', { default: () => [] })

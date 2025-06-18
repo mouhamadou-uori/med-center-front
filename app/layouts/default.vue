@@ -1,11 +1,11 @@
-<script setup lang="ts">
+cette<script setup lang="ts">
 const route = useRoute()
 const toast = useToast()
 
 const open = ref(false)
 
 const links = [[{
-  label: 'Home',
+  label: 'Accueil',
   icon: 'i-lucide-house',
   to: '/',
   onSelect: () => {
@@ -20,26 +20,52 @@ const links = [[{
     open.value = false
   }
 }, {
-  label: 'Customers',
+  label: 'Patients',
   icon: 'i-lucide-users',
-  to: '/customers',
+  to: '/patients',
   onSelect: () => {
     open.value = false
   }
 }, {
-  label: 'Settings',
+  label: 'Imagerie Médicale',
+  icon: 'i-lucide-heart-pulse',
+  defaultOpen: false,
+  children: [{
+    label: 'Tableau de bord',
+    to: '/orthanc',
+    icon: 'i-lucide-layout-dashboard',
+    onSelect: () => {
+      open.value = false
+    }
+  }, {
+    label: 'Patients',
+    to: '/orthanc/patients',
+    icon: 'i-lucide-users',
+    onSelect: () => {
+      open.value = false
+    }
+  }, {
+    label: 'Statistiques',
+    to: '/orthanc/statistics',
+    icon: 'i-lucide-bar-chart-2',
+    onSelect: () => {
+      open.value = false
+    }
+  }]
+}, {
+  label: 'Paramètres',
   to: '/settings',
   icon: 'i-lucide-settings',
   defaultOpen: true,
   children: [{
-    label: 'General',
+    label: 'Général',
     to: '/settings',
     exact: true,
     onSelect: () => {
       open.value = false
     }
   }, {
-    label: 'Members',
+    label: 'Membres',
     to: '/settings/members',
     onSelect: () => {
       open.value = false
@@ -51,7 +77,7 @@ const links = [[{
       open.value = false
     }
   }, {
-    label: 'Security',
+    label: 'Sécurité',
     to: '/settings/security',
     onSelect: () => {
       open.value = false
@@ -92,18 +118,18 @@ onMounted(async () => {
   }
 
   toast.add({
-    title: 'We use first-party cookies to enhance your experience on our website.',
+    title: 'Nous utilisons des cookies propriétaires pour améliorer votre expérience sur notre site Web.',
     duration: 0,
     close: false,
     actions: [{
-      label: 'Accept',
+      label: 'Accepter',
       color: 'neutral',
       variant: 'outline',
       onClick: () => {
         cookie.value = 'accepted'
       }
     }, {
-      label: 'Opt out',
+      label: 'Refuser',
       color: 'neutral',
       variant: 'ghost'
     }]

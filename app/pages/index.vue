@@ -1,6 +1,8 @@
-<script setup lang="ts">
-import { sub } from 'date-fns'
-import type { Period, Range } from '~/types'
+<script setup>
+// Version simplifiée sans TypeScript strict
+definePageMeta({
+  requiresAuth: false // Permettre l'accès sans authentification pour voir les statistiques de test
+})
 
 const { isNotificationsSlideoverOpen } = useDashboard()
 
@@ -9,27 +11,45 @@ const items = [[{
   icon: 'i-lucide-send',
   to: '/inbox'
 }, {
-  label: 'New customer',
+  label: 'New patient',
   icon: 'i-lucide-user-plus',
-  to: '/customers'
+  to: '/patients'
+}, {
+  label: 'Medical imaging',
+  icon: 'i-lucide-heart-pulse',
+  to: '/orthanc'
 }]]
 
-const range = shallowRef<Range>({
-  start: sub(new Date(), { days: 14 }),
-  end: new Date()
+// Données simplifiées pour éviter les erreurs de date
+const twoWeeksAgo = new Date()
+twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+const now = new Date()
+
+const range = shallowRef({
+  start: twoWeeksAgo.toISOString(),
+  end: now.toISOString()
 })
-const period = ref<Period>('daily')
+const period = ref('today')
 </script>
 
 <template>
   <UDashboardPanel id="home">
     <template #header>
-      <UDashboardNavbar title="Home" :ui="{ right: 'gap-3' }">
+      <UDashboardNavbar title="Accueil" :ui="{ right: 'gap-3' }">
         <template #leading>
           <UDashboardSidebarCollapse />
         </template>
 
         <template #right>
+          <UButton
+            to="/orthanc"
+            icon="i-lucide-heart-pulse"
+            color="primary"
+            variant="soft"
+            label="Imagerie Médicale"
+            class="mr-2"
+          />
+
           <UTooltip text="Notifications" :shortcuts="['N']">
             <UButton
               color="neutral"

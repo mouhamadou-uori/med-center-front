@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format } from 'date-fns'
+import { format } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
 
@@ -10,6 +10,12 @@ const props = defineProps<{
   range: Range
 }>()
 
+type ApiDataRecord = {
+  date: string
+  patients: number
+  consultations: number
+}
+
 type DataRecord = {
   date: Date
   amount: number
@@ -17,43 +23,56 @@ type DataRecord = {
 
 const { width } = useElementSize(cardRef)
 
-// We use `useAsyncData` here to have same random data on the client and server
-const { data } = await useAsyncData<DataRecord[]>(async () => {
-  const dates = ({
-    daily: eachDayOfInterval,
-    weekly: eachWeekOfInterval,
-    monthly: eachMonthOfInterval
-  } as Record<Period, typeof eachDayOfInterval>)[props.period](props.range)
+const data = ref<DataRecord[]>([])
+const loading = ref(false)
 
-  const min = 1000
-  const max = 10000
+// Replace with your actual endpoint URL
+const fetchData = async () => {
+  loading.value = true
+  try {
+    // Format dates as YYYY-MM-DD for the API
+    const startDate = props.range.start
+    const endDate = props.range.end
+    
+    const response = await $fetch<ApiDataRecord[]>(`http://localhost:9000/api/medical/stats/period/${props.period}/${startDate}/${endDate}/3`, {
+      method: 'GET'
+    })
+    
+    data.value = response.map(item => ({
+      date: new Date(item.date),
+      amount: item.consultations // Using consultations as the main metric
+    }))
+  } catch (error) {
+    console.error('Error fetching chart data:', error)
+    data.value = []
+  } finally {
+    loading.value = false
+  }
+}
 
-  return dates.map(date => ({ date, amount: Math.floor(Math.random() * (max - min + 1)) + min }))
-}, {
-  watch: [() => props.period, () => props.range],
-  default: () => []
-})
+watch([() => props.period, () => props.range], fetchData, { immediate: true })
 
 const x = (_: DataRecord, i: number) => i
 const y = (d: DataRecord) => d.amount
 
-const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
+const total = computed(() => data.value.reduce((acc: number, item: DataRecord) => acc + item.amount, 0))
 
-const formatNumber = new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format
+const formatNumber = new Intl.NumberFormat('en', { maximumFractionDigits: 0 }).format
 
 const formatDate = (date: Date): string => {
-  return ({
-    daily: format(date, 'd MMM'),
-    weekly: format(date, 'd MMM'),
-    monthly: format(date, 'MMM yyy')
-  })[props.period]
+  const formatMap: Record<Period, string> = {
+    today: 'd MMM',
+    week: 'd MMM',
+    month: 'MMM yyy',
+    year: 'MMM yyy'
+  }
+  return format(date, formatMap[props.period])
 }
 
 const xTicks = (i: number) => {
   if (i === 0 || i === data.value.length - 1 || !data.value[i]) {
     return ''
   }
-
   return formatDate(data.value[i].date)
 }
 
@@ -65,7 +84,7 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
     <template #header>
       <div>
         <p class="text-xs text-muted uppercase mb-1.5">
-          Revenue
+          Consultations
         </p>
         <p class="text-3xl text-highlighted font-semibold">
           {{ formatNumber(total) }}
@@ -73,7 +92,12 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
       </div>
     </template>
 
+    <div v-if="loading" class="h-96 flex items-center justify-center">
+      <UIcon name="i-heroicons-arrow-path" class="animate-spin" />
+    </div>
+
     <VisXYContainer
+      v-else
       :data="data"
       :padding="{ top: 40 }"
       class="h-96"
