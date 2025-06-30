@@ -1,6 +1,5 @@
-cette<script setup lang="ts">
+<script setup lang="ts">
 const route = useRoute()
-const toast = useToast()
 
 const open = ref(false)
 
@@ -28,26 +27,33 @@ const links = [[{
   }
 }, {
   label: 'Imagerie Médicale',
-  icon: 'i-lucide-heart-pulse',
+  icon: 'i-lucide-image',
   defaultOpen: false,
   children: [{
     label: 'Tableau de bord',
-    to: '/orthanc',
+    to: '/imagerie',
     icon: 'i-lucide-layout-dashboard',
     onSelect: () => {
       open.value = false
     }
   }, {
-    label: 'Patients',
-    to: '/orthanc/patients',
+    label: 'Explorer patients',
+    to: '/imagerie/patients',
     icon: 'i-lucide-users',
     onSelect: () => {
       open.value = false
     }
   }, {
-    label: 'Statistiques',
-    to: '/orthanc/statistics',
-    icon: 'i-lucide-bar-chart-2',
+    label: 'Rapports',
+    to: '/imagerie/rapports',
+    icon: 'i-lucide-clipboard-list',
+    onSelect: () => {
+      open.value = false
+    }
+  }, {
+    label: 'Téléchargement',
+    to: '/imagerie/download',
+    icon: 'i-lucide-download',
     onSelect: () => {
       open.value = false
     }
@@ -110,31 +116,6 @@ const groups = computed(() => [{
     target: '_blank'
   }]
 }])
-
-onMounted(async () => {
-  const cookie = useCookie('cookie-consent')
-  if (cookie.value === 'accepted') {
-    return
-  }
-
-  toast.add({
-    title: 'Nous utilisons des cookies propriétaires pour améliorer votre expérience sur notre site Web.',
-    duration: 0,
-    close: false,
-    actions: [{
-      label: 'Accepter',
-      color: 'neutral',
-      variant: 'outline',
-      onClick: () => {
-        cookie.value = 'accepted'
-      }
-    }, {
-      label: 'Refuser',
-      color: 'neutral',
-      variant: 'ghost'
-    }]
-  })
-})
 </script>
 
 <template>
